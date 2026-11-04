@@ -1,0 +1,6 @@
+[app]
+log_file = "data/bad.log"
+log_level = "INFO"
+
+[report]
+top_n = 3
