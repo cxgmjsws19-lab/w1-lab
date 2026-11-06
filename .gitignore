@@ -11,3 +11,5 @@ wheels/
 .vscode/
 .mypy_cache/
 data/big.log
+.coverage
+htmlcov/
