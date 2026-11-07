@@ -3,6 +3,7 @@ import logging
 import time
 from collections.abc import Callable
 from typing import ParamSpec,TypeVar
+from collections.abc import Awaitable
 
 logger = logging.getLogger(__name__)
 
@@ -51,3 +52,18 @@ def retry(
         return wrapper
 
     return deco
+
+def timer_async(
+        fn:Callable[P,Awaitable[R]],
+)->Callable[P,Awaitable[R]]:
+
+    @functools.wraps(fn)
+    async def wrapper(*args:P.args,**kwargs:P.kwargs)->R:
+        start = time.perf_counter()
+        try:
+            return await fn(*args,**kwargs)
+        finally:
+            cost_ms =(time.perf_counter()-start) * 1000
+            logger.debug("%s 耗时 %.3f ms", fn.__name__, cost_ms)
+
+    return wrapper
