@@ -1,8 +1,8 @@
 import functools
 import logging
 import time
-from collections.abc import Callable
-from typing import ParamSpec,TypeVar
+from collections.abc import Callable,Awaitable,Coroutine
+from typing import ParamSpec,TypeVar,Any
 from collections.abc import Awaitable
 
 logger = logging.getLogger(__name__)
@@ -55,7 +55,7 @@ def retry(
 
 def timer_async(
         fn:Callable[P,Awaitable[R]],
-)->Callable[P,Awaitable[R]]:
+)->Callable[P,Coroutine[Any,Any,R]]:
 
     @functools.wraps(fn)
     async def wrapper(*args:P.args,**kwargs:P.kwargs)->R:
