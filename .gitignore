@@ -13,3 +13,5 @@ wheels/
 data/big.log
 .coverage
 htmlcov/
+*.db
+*.db-journal
