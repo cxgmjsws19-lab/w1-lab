@@ -19,8 +19,8 @@ class HealthResponse(BaseModel):
 def health()->HealthResponse:
     return HealthResponse(status="ok")
 
-@app.post("/parse", response_model=LogEntry)
-def parse(request: ParseRequest) -> LogEntry:
+@app.post("/entries", response_model=LogEntry,status_code=201)
+def create_entry(request: ParseRequest) -> LogEntry:
     try:
         entry = parse_line(request.line)
     except LogFormatError as exc:
@@ -36,8 +36,8 @@ class StatsResponse(BaseModel):
     total:int
     by_status:dict[int,int]
 
-@app.get("/stats",response_model=StatsResponse)
-def stats()->StatsResponse:
+@app.get("/entries/stats",response_model=StatsResponse)
+def entries_stats()->StatsResponse:
     with SessionLocal() as session:
         total=session.scalar(select(func.count()).select_from(LogEntryRow)) or 0
         rows=session.execute(
