@@ -4,12 +4,12 @@ from sqlalchemy import func,select
 from collections.abc import Iterator
 from sqlalchemy.orm import Session
 
-from .db import Base,LogEntryRow,SessionLocal,engine
+from .db import LogEntryRow,SessionLocal
 from .models import LogEntry
 from .parser import LogFormatError,parse_line
 
 app=FastAPI(title="w1-lab API")
-Base.metadata.create_all(engine)
+
 
 def get_db()->Iterator[Session]:
     with SessionLocal() as session: # 准备：开连接
