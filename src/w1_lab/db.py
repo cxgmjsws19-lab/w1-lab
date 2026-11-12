@@ -14,6 +14,7 @@ class Base(DeclarativeBase):
 class UserRow(Base):
     __tablename__ ="users"
 
+    password_hash:Mapped[str]=mapped_column(String(256))
     id:Mapped[int] = mapped_column(primary_key=True)
     name:Mapped[str]=mapped_column(String(64))
 

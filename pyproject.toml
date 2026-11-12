@@ -8,9 +8,11 @@ authors = [
 ]
 requires-python = ">=3.12"
 dependencies = [
+    "fakeredis>=2.40.0",
     "fastapi>=0.162.2",
     "httpx>=0.28.1",
     "pydantic>=2.14.2",
+    "pyjwt>=2.15.1",
     "rich>=15.0.0",
     "sqlalchemy>=2.1.8",
     "uvicorn>=0.54.0",

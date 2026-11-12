@@ -1,5 +1,6 @@
 from collections.abc import Iterator
 from pathlib import Path
+from w1_lab import cache
 
 import pytest
 from fastapi.testclient import TestClient
@@ -10,6 +11,12 @@ from w1_lab.api import app,get_db
 from w1_lab.db import Base
 
 GOOD_LINE = "2026-11-10T09:00:00 10.0.0.1 GET /api/users 200 1234 45.2"
+
+@pytest.fixture(autouse=True)
+def _clear_cache() -> Iterator[None]:
+    cache.clear()
+    yield
+    cache.clear()
 
 @pytest.fixture
 def client(tmp_path:Path) -> Iterator[TestClient]:
@@ -24,8 +31,17 @@ def client(tmp_path:Path) -> Iterator[TestClient]:
         with TestSession() as session:
             yield session
 
-    app.dependency_overrides[get_db]=override_get_db  # 用override_get_db代替
-    yield TestClient(app)
+    app.dependency_overrides[get_db] = override_get_db
+
+    test_client = TestClient(app)
+    register = test_client.post(
+        "/register", json={"username": "tester", "password": "pw123"}
+    )
+    test_client.headers["Authorization"] = (
+        f"Bearer {register.json()['access_token']}"
+    )
+
+    yield test_client
     app.dependency_overrides.clear()
 
 def test_health(client:TestClient)->None:
@@ -54,3 +70,25 @@ def test_stats_counts_after_writes(client:TestClient)->None:
 def test_old_routes_are_gone(client:TestClient)->None:
     assert client.post("/parse",json={"line":GOOD_LINE}).status_code==404
     assert client.get("/stats").status_code==404
+
+def test_entries_requires_token(client: TestClient) -> None:
+    fresh = TestClient(app)
+    response = fresh.post("/entries", json={"line": GOOD_LINE})
+    assert response.status_code == 401
+    assert response.headers["www-authenticate"] == "Bearer"
+
+
+def test_stats_cache_hit(client: TestClient) -> None:
+    first = client.get("/entries/stats")
+    assert first.headers["x-cache"] == "MISS"
+    second = client.get("/entries/stats")
+    assert second.headers["x-cache"] == "HIT"
+
+
+def test_write_invalidates_cache(client: TestClient) -> None:
+    client.get("/entries/stats")
+    assert client.get("/entries/stats").headers["x-cache"] == "HIT"
+
+    client.post("/entries", json={"line": GOOD_LINE})
+
+    assert client.get("/entries/stats").headers["x-cache"] == "MISS"

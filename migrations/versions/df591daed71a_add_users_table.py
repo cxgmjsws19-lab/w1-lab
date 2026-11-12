@@ -28,7 +28,9 @@ def upgrade() -> None:
     )
     with op.batch_alter_table('log_entries', schema=None) as batch_op:
         batch_op.add_column(sa.Column('user_id', sa.Integer(), nullable=True))
-        batch_op.create_foreign_key(None, 'users', ['user_id'], ['id'])
+        batch_op.create_foreign_key(
+            'fk_log_entries_user_id_users','users',['user_id'],['id']
+        )
 
     # ### end Alembic commands ###
 
@@ -40,7 +42,7 @@ def downgrade() -> None:
         # WARNING: constraint name is None; this directive will fail as
         # rendered.  Add a name, or use a naming convention; see
         # https://alembic.sqlalchemy.org/en/latest/naming.html
-        batch_op.drop_constraint(None, type_='foreignkey')
+        batch_op.drop_constraint('fk_log_entries_user_id_users', type_='foreignkey')
         batch_op.drop_column('user_id')
 
     op.drop_table('users')
