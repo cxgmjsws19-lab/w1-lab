@@ -14,12 +14,13 @@ Base URL:'http://127.0.0.1:8000'
 -请求:'{"username":"str","password":"str"}'
 -201:'{"access_token":"str","token_type":"bearer"}'
 -409:用户名已存在
+-为什么是409：报409是资源已经被占用，这说明用户名已经被创建过了，你需要修改用户名
 
 ### POST/login
 -请求:'{"username":"str","password":"str"}'
 -200:'{"access_token":"str","token_type":"bearer"}
 -401:用户名或密码错误
-
+-为什么是401:报401是认证失败，无法登录的意思，不知道你是谁
 ## 需认证接口
 
 请求头必须带 'Authorization:Bearer<token>'
@@ -29,6 +30,7 @@ Base URL:'http://127.0.0.1:8000'
 -201:'LogEntry'对象
 -401：缺少/无效/过期token（响应带 `WWW-Authenticate: Bearer`）
 -422：日志格式不符合7字段约定
+为什么是422：读懂了但不合法
 
 ### GET/entries/stats
 
