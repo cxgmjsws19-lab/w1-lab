@@ -11,10 +11,30 @@ from .models import LogEntry
 from .parser import LogFormatError, parse_line
 from .auth import create_token, decode_token, hash_password, verify_password
 
+import threading
+import contextlib
 import jwt
 
 app = FastAPI(title="w1-lab API")  # 创建FastAPI实例
 STATS_CACHE_KEY = "stats:v1"  # 以后StatsResponse结构变了，把key改成v2，旧缓存自动失效，缓存版本化小技巧
+
+ENTRY_CACHE_TTL = 30      # 单条日志缓存 30 秒
+ENTRY_NULL_TTL = 10       # 「不存在」缓存 10 秒：短一点，避免刚缓存了空、数据紧接着就被创建
+
+# ── 防击穿：按 key 分配锁（single-flight） ─────────────────────────
+# 注意：_locks 会随 key 增长而无限增长。学习项目规模无所谓，
+# 生产要么用 LRU 上限，要么用 Redis 的 SETNX 做分布式锁。
+_locks: dict[str, threading.Lock] = {}
+_locks_guard = threading.Lock()
+
+
+def _lock_for(key: str) -> threading.Lock:
+    with _locks_guard:
+        lock = _locks.get(key)
+        if lock is None:
+            lock = threading.Lock()
+            _locks[key] = lock
+        return lock
 
 
 def get_db() -> Iterator[Session]:  # 数据库会话依赖，作为 Depends(get_db) 的依赖源。
@@ -85,7 +105,7 @@ class StatsResponse(BaseModel):
     by_status: dict[int, int]
 
 
-@app.get("/entries/stats", response_model=StatsResponse)
+@app.get("/entries/stats", response_model=StatsResponse)  #把这个函数注册为 FastAPI 的 GET 路由，路径 /entries/stats
 def entries_stats(
     response: Response,
     session: Session = Depends(get_db),
@@ -95,16 +115,24 @@ def entries_stats(
         response.headers["X-cache"] = "HIT"
         return StatsResponse.model_validate_json(cached)  # 经历了 JSON->对象->JSON 的往返
 
-    response.headers["X-cache"] = "MISS"  # 走到这里说明缓存未命中
+    # 防击穿：缓存失效瞬间，只放一个请求去查库，其余等它回填后直接读缓存。
+    with _lock_for(STATS_CACHE_KEY):    #_lock_for(key)：返回这个 key 专属的锁，同一时刻只有一个线程能进入这个 with 块
+    #with contextlib.nullcontext():      # 假装没有锁
+        cached = cache.get(STATS_CACHE_KEY)  # 第二次查缓存，因为可能在等锁的这段时间，别的线程已经查完库，把缓存填好了
+        if cached is not None:
+            response.headers["X-cache"] = "HIT"
+            return StatsResponse.model_validate_json(cached)
 
-    total = session.scalar(select(func.count()).select_from(LogEntryRow)) or 0
-    rows = session.execute(
-        select(LogEntryRow.status, func.count()).group_by(LogEntryRow.status)
-    ).all()
+        response.headers["X-cache"] = "MISS"  # 走到这里说明缓存未命中，且本请求拿到了锁
 
-    result = StatsResponse(total=total, by_status={s: c for s, c in rows})
-    cache.set(STATS_CACHE_KEY, result.model_dump_json())
-    return result
+        total = session.scalar(select(func.count()).select_from(LogEntryRow)) or 0
+        rows = session.execute(
+            select(LogEntryRow.status, func.count()).group_by(LogEntryRow.status)
+        ).all()
+
+        result = StatsResponse(total=total, by_status={s: c for s, c in rows})
+        cache.set(STATS_CACHE_KEY, result.model_dump_json())
+        return result
 
 
 @app.post("/register", response_model=TokenResponse, status_code=201)  # 注册
@@ -137,3 +165,32 @@ def login(
         raise HTTPException(status_code=401, detail="用户名或密码错误")
 
     return TokenResponse(access_token=create_token(request.username))
+
+
+# ── 注意：本路由必须注册在 /entries/stats 之后 ─────────────────────
+# FastAPI 按注册顺序匹配；若写在前面，GET /entries/stats 会先命中
+# {entry_id}，把 "stats" 当 int 转换失败 → 422，统计接口直接废掉。
+@app.get("/entries/{entry_id}", response_model=LogEntry)
+def get_entry(entry_id: int, session: Session = Depends(get_db)) -> LogEntry:
+    key = f"entry:{entry_id}"  # 单条缓存的 key，和 stats:v1 分开，为每个条目生成独立缓存 key
+
+    cached = cache.get(key)
+    if cached is None:
+        # 防击穿：同一个 entry_id 并发时，只放一个请求查库
+        with _lock_for(key):
+            cached = cache.get(key)  # 双重检查
+            if cached is None:
+                row = session.get(LogEntryRow, entry_id)
+                if row is None:
+                    # 防穿透：查不到也缓存（哨兵值），下次直接 404，不再打库，如果数据库也不存在，也存下来（哨兵值）
+                    cache.set(key, cache.NULL_SENTINEL, ttl=ENTRY_NULL_TTL)      
+                    raise HTTPException(status_code=404, detail="日志不存在")
+
+                entry = LogEntry.model_validate(row, from_attributes=True)#from_attributes=True允许从对象属性取值
+                cache.set(key, entry.model_dump_json(), ttl=ENTRY_CACHE_TTL)
+                return entry
+
+    # 走到这里说明缓存里有东西：要么是哨兵（真不存在），要么是真实数据
+    if cached == cache.NULL_SENTINEL:
+        raise HTTPException(status_code=404, detail="日志不存在")
+    return LogEntry.model_validate_json(cached)

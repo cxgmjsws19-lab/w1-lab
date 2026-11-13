@@ -15,3 +15,6 @@ data/big.log
 htmlcov/
 *.db
 *.db-journal
+
+# 运行时日志（样例数据 data/sample.log、data/bad.log 仍要提交）
+data/app.log*
