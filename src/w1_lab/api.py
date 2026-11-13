@@ -12,7 +12,6 @@ from .parser import LogFormatError, parse_line
 from .auth import create_token, decode_token, hash_password, verify_password
 
 import threading
-import contextlib
 import jwt
 
 app = FastAPI(title="w1-lab API")  # 创建FastAPI实例
@@ -117,7 +116,6 @@ def entries_stats(
 
     # 防击穿：缓存失效瞬间，只放一个请求去查库，其余等它回填后直接读缓存。
     with _lock_for(STATS_CACHE_KEY):    #_lock_for(key)：返回这个 key 专属的锁，同一时刻只有一个线程能进入这个 with 块
-    #with contextlib.nullcontext():      # 假装没有锁
         cached = cache.get(STATS_CACHE_KEY)  # 第二次查缓存，因为可能在等锁的这段时间，别的线程已经查完库，把缓存填好了
         if cached is not None:
             response.headers["X-cache"] = "HIT"
