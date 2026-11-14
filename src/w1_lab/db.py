@@ -3,9 +3,10 @@ from datetime import datetime
 from sqlalchemy import DateTime,String,create_engine,ForeignKey
 from sqlalchemy.orm import DeclarativeBase,Mapped,mapped_column,sessionmaker,relationship
 
-DATABASE_URL ="sqlite:///w1lab.db"
+# DATABASE_URL ="sqlite:///w1lab.db"
+DATABASE_URL="postgresql+psycopg://postgres:devpass@127.0.0.1:5432/w1lab"
 
-engine=create_engine(DATABASE_URL,connect_args={"check_same_thread":False})
+engine=create_engine(DATABASE_URL)
 SessionLocal=sessionmaker(bind=engine,expire_on_commit=False)
 
 class Base(DeclarativeBase):
