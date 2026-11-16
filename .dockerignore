@@ -1,0 +1,14 @@
+# docker build会把整个目录（除ignore外全部）发给构建上下文
+# 不写的话.venv+data+.git全被塞进去，写完之后，只发源码几十KB，快很多
+.venv
+.git
+.gitignore
+data
+*.db
+**/__pycache__
+.mypy_cache
+.coverage
+htmlcov
+check_*.py
+docs
+tests
