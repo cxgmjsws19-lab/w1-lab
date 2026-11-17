@@ -11,17 +11,35 @@ services:    #顶层，Compose文件的新版顶层键（替代旧版version写�
       interval: 5s
       timeout: 3s
       retries: 5
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
   api:
     build: .  #不用现成镜像，而是用当前目录的 Dockerfile 构建（. 表示构建上下文为当前目录）。
     ports:
       - "8000:8000"   #把宿主机 8000 映射到容器 8000，这样浏览器访问 http://localhost:8000 就能到容器里的 uvicorn。
-    environment:  #给 api 容器注入数据库连接串。
+    environment:  #给 api 容器注入数据库连接串。容器里的应用通过读环境变量拿到连接串。
       DATABASE_URL: postgresql+psycopg://postgres:devpass@db:5432/w1lab
+      REDIS_URL: redis://redis:6379/0
     depends_on:
       db:
         condition: service_healthy
-
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2).status == 200 else 1)"
+      interval: 5s
+      timeout: 3s
+      retries: 5
 volumes:
   pgdata:
 
