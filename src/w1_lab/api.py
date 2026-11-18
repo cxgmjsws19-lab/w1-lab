@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Depends, Response, Header
+from fastapi import FastAPI, HTTPException, Depends, Response, Header,Request
 from pydantic import BaseModel
 from sqlalchemy import func, select
 from collections.abc import Iterator
@@ -79,6 +79,19 @@ class TokenResponse(BaseModel):  # 令牌响应
 @app.get("/health", response_model=HealthResponse)  # 注册 GET /health 路由
 def health() -> HealthResponse:
     return HealthResponse(status="ok")  # 负载均衡器、K8s 探针、监控系统定期打这个接口判断服务活着
+
+
+# 开发期调试用：回显后端收到的客户端信息与代理头。
+# 生产环境应删除，或加鉴权后仅内网暴露。
+@app.get("/debug/whoami")
+def whoami(request:Request) -> dict[str, str | None]:
+    return {
+        "client":request.client.host if request.client else None,
+        "x_forwarded_for":request.headers.get("x-forwarded-for"),
+        "x_real_ip":request.headers.get("x-real-ip"),
+        "x_forwarded_proto":request.headers.get("x-forwarded-proto"),
+        "host":request.headers.get("host"),
+    }
 
 
 @app.post("/entries", response_model=LogEntry, status_code=201)  # 注册 POST /entries

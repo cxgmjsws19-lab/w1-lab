@@ -21,8 +21,8 @@ services:    #顶层，Compose文件的新版顶层键（替代旧版version写�
 
   api:
     build: .  #不用现成镜像，而是用当前目录的 Dockerfile 构建（. 表示构建上下文为当前目录）。
-    ports:
-      - "8000:8000"   #把宿主机 8000 映射到容器 8000，这样浏览器访问 http://localhost:8000 就能到容器里的 uvicorn。
+    #ports:
+      #- "8000:8000"   #把宿主机 8000 映射到容器 8000，这样浏览器访问 http://localhost:8000 就能到容器里的 uvicorn。
     environment:  #给 api 容器注入数据库连接串。容器里的应用通过读环境变量拿到连接串。
       DATABASE_URL: postgresql+psycopg://postgres:devpass@db:5432/w1lab
       REDIS_URL: redis://redis:6379/0
@@ -40,6 +40,17 @@ services:    #顶层，Compose文件的新版顶层键（替代旧版version写�
       interval: 5s
       timeout: 3s
       retries: 5
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - "80:80"
+      - "443:443" 
+    volumes:                 # 挂载
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+    depends_on:
+      api:
+        condition: service_healthy
 volumes:
   pgdata:
 

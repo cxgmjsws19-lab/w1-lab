@@ -18,3 +18,6 @@ htmlcov/
 
 # 运行时日志（样例数据 data/sample.log、data/bad.log 仍要提交）
 data/app.log*
+# ��ǩ֤�飺˽Կ�������ύ
+nginx/certs/*.key
+nginx/certs/*.crt
