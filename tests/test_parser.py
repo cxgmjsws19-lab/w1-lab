@@ -34,3 +34,8 @@ def test_parse_line_rejects_naive_datetime() -> None:
     line =  "2026-11-05T09:00:00 10.0.0.1 GET /api/users 200 1234 45.2"
     with pytest.raises(LogFormatError):
         parse_line(line)
+
+def test_parse_line_rejects_invalid_ip() ->None:
+    line= "2026-11-05T09:00:00+00:00 不是IP GET /api/users 200 1234 45.2"
+    with pytest.raises(LogFormatError):
+        parse_line(line)
