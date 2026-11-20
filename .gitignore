@@ -21,3 +21,7 @@ data/app.log*
 # 自签证书：私钥绝不能提交
 nginx/certs/*.key
 nginx/certs/*.crt
+
+# 临时文件
+*.bak
+/*.json
