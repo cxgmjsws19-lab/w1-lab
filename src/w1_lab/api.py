@@ -80,6 +80,33 @@ class TokenResponse(BaseModel):  # 令牌响应
 def health() -> HealthResponse:
     return HealthResponse(status="ok")  # 负载均衡器、K8s 探针、监控系统定期打这个接口判断服务活着
 
+@app.get("/readyz")
+def readyz() -> Response:
+    # 证明能对外服务：核心依赖可用。
+
+    # 与/health的分工：
+        # /health ->  进程还活着吗（Docker healthcheck用，挂了该重启）
+        # /readyz -> 依赖有用吗（负载均衡摘流量，监控报警用，挂了不该重启
+
+        from sqlalchemy import text
+        from .db import SessionLocal
+
+        try:
+            with SessionLocal() as session:
+                session.execute(text("SELECT 1"))
+        except Exception:
+            return Response(
+                content='{"status":"not_ready","dependency":"database"}',
+                status_code=503,
+                media_type="application/json",
+            )
+
+        return Response(
+            content='{"status":"ready"}',
+            status_code=200,
+            media_type="application/json",
+        )
+
 
 # 开发期调试用：回显后端收到的客户端信息与代理头。
 # 生产环境应删除，或加鉴权后仅内网暴露。
