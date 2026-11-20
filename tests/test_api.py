@@ -17,7 +17,7 @@ from w1_lab.models import LogEntry
 from w1_lab.db import Base
 from w1_lab.parser import LogFormatError
 
-GOOD_LINE = "2026-11-10T09:00:00 10.0.0.1 GET /api/users 200 1234 45.2" #一条合法的日志样本，多个测试复用。
+GOOD_LINE = "2026-11-10T09:00:00+00:00 10.0.0.1 GET /api/users 200 1234 45.2" #一条合法的日志样本，多个测试复用。
 
 @pytest.fixture(autouse=True)
 def _clear_cache() -> Iterator[None]:   # 自动清缓存

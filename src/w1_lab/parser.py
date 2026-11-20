@@ -16,6 +16,15 @@ def parse_line(line: str) -> LogEntry:
 
     ts_raw, ip, method, path, status_raw, size_raw, latency_raw = parts
     try:
+        ts = datetime.fromisoformat(ts_raw)  #解析成datetime对象
+    except ValueError as exc:
+        raise LogFormatError(str(exc)) from exc
+
+    if ts.tzinfo is None:
+        raise LogFormatError(
+            f"时间必须带时区，例如 2026-11-20T10:00:00+08:00，实际：{ts_raw}"
+        )
+    try:
         return LogEntry(
             ip=ip,
             ts=datetime.fromisoformat(ts_raw),

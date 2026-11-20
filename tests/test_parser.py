@@ -1,9 +1,9 @@
 import pytest
 
 from w1_lab.parser import parse_line,LogFormatError
-from datetime import datetime
+from datetime import datetime,timezone
 
-VALID ="2026-11-05T09:00:00 10.0.0.1 GET /api/users 200 1234 45.2"
+VALID ="2026-11-05T09:00:00+00:00 10.0.0.1 GET /api/users 200 1234 45.2"
 
 def test_parse_line_ok()->None:
     entry = parse_line(VALID)
@@ -12,7 +12,7 @@ def test_parse_line_ok()->None:
     assert entry.status==200
     assert entry.size==1234
     assert entry.latency==45.2
-    assert entry.ts==datetime(2026,11,5,9,0,0)
+    assert entry.ts==datetime(2026,11,5,9,0,0,tzinfo=timezone.utc)
 
 @pytest.mark.parametrize(
     ("line", "why"),
@@ -27,5 +27,10 @@ def test_parse_line_ok()->None:
 )
 
 def test_parse_line_invalid(line:str,why:str) -> None:
+    with pytest.raises(LogFormatError):
+        parse_line(line)
+
+def test_parse_line_rejects_naive_datetime() -> None:
+    line =  "2026-11-05T09:00:00 10.0.0.1 GET /api/users 200 1234 45.2"
     with pytest.raises(LogFormatError):
         parse_line(line)

@@ -37,7 +37,7 @@ class LogEntryRow(Base):
     user_id:Mapped[int | None]=mapped_column(ForeignKey("users.id"))
     user:Mapped["UserRow | None"]=relationship(back_populates="entries")
     ip:Mapped[str]=mapped_column(String(64),index=True)
-    ts:Mapped[datetime]=mapped_column(DateTime)
+    ts:Mapped[datetime]=mapped_column(DateTime(timezone=True))
     method:Mapped[str]=mapped_column(String(16))
     path:Mapped[str]=mapped_column(String(256))
     status:Mapped[int]
