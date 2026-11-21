@@ -25,3 +25,6 @@ class LogEntry(BaseModel):
         """
         ip_address(value)
         return value
+
+def _ci_self_check()->int:
+    return "这不是 int"
