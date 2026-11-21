@@ -12,6 +12,7 @@ from .parser import LogFormatError, parse_line
 from .auth import create_token, decode_token, hash_password, verify_password
 
 import threading
+import os
 import jwt
 
 app = FastAPI(title="w1-lab API")  # 创建FastAPI实例
@@ -109,16 +110,21 @@ def readyz() -> Response:
 
 
 # 开发期调试用：回显后端收到的客户端信息与代理头。
-# 生产环境应删除，或加鉴权后仅内网暴露。
-@app.get("/debug/whoami")
-def whoami(request:Request) -> dict[str, str | None]:
-    return {
-        "client":request.client.host if request.client else None,
-        "x_forwarded_for":request.headers.get("x-forwarded-for"),
-        "x_real_ip":request.headers.get("x-real-ip"),
-        "x_forwarded_proto":request.headers.get("x-forwarded-proto"),
-        "host":request.headers.get("host"),
-    }
+# 【为什么默认关闭】它会暴露内网 IP 和代理链，生产环境不该存在。
+# 【怎么开】容器里设 DEBUG=true 才会注册这条路由；不设就是 404（路由根本不存在，
+#          比"存在但被拦"更安全——攻击者连探测都探不到）。
+# 【代价】改 DEBUG 需要重启进程（路由在 import 时决定），不是热更新。
+if os.getenv("DEBUG", "false").strip().lower() == "true":
+
+    @app.get("/debug/whoami")
+    def whoami(request: Request) -> dict[str, str | None]:
+        return {
+            "client": request.client.host if request.client else None,
+            "x_forwarded_for": request.headers.get("x-forwarded-for"),
+            "x_real_ip": request.headers.get("x-real-ip"),
+            "x_forwarded_proto": request.headers.get("x-forwarded-proto"),
+            "host": request.headers.get("host"),
+        }
 
 
 @app.post("/entries", response_model=LogEntry, status_code=201)  # 注册 POST /entries
