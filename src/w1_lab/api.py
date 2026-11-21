@@ -15,6 +15,12 @@ import threading
 import os
 import jwt
 
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(levelname)s:     %(name)s: %(message)s",
+)
 app = FastAPI(title="w1-lab API")  # 创建FastAPI实例
 STATS_CACHE_KEY = "stats:v1"  # 以后StatsResponse结构变了，把key改成v2，旧缓存自动失效，缓存版本化小技巧
 
@@ -129,7 +135,7 @@ if os.getenv("DEBUG", "false").strip().lower() == "true":
 
 @app.post("/entries", response_model=LogEntry, status_code=201)  # 注册 POST /entries
 def create_entry(
-    request: ParseRequest,  # 请求体参数，FastAPI 自动从 JSON body 解析成 ParseRequest
+    request: ParseRequest,  # 校验！请求体参数，FastAPI 自动从 JSON body 解析成 ParseRequest
     response: Response,
     session: Session = Depends(get_db),  # 数据库会话，由 get_db 提供
     current_user: str = Depends(get_current_user),

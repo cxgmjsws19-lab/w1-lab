@@ -16,6 +16,7 @@ from w1_lab.auth import ALGORITHM,SECRET_KEY
 from w1_lab.models import LogEntry
 from w1_lab.db import Base
 from w1_lab.parser import LogFormatError
+from redis.exceptions import ConnectionError as RedisConnectionError
 
 GOOD_LINE = "2026-11-10T09:00:00+00:00 10.0.0.1 GET /api/users 200 1234 45.2" #一条合法的日志样本，多个测试复用。
 
@@ -192,3 +193,12 @@ def test_stats_single_flight(     #防击穿
 
     assert all(r.status_code == 200 for r in results)
     assert set_calls["n"] == 1  # 没有锁的话会是 5
+
+def test_cache_degrades_when_redis_is_down(monkeypatch: pytest.MonkeyPatch) -> None:
+    """缓存故障时必须降级（返回 None），而不是抛异常。"""
+
+    def boom(*args, **kwargs):
+        raise RedisConnectionError("redis is down")  # 用 redis 自己的异常类
+
+    monkeypatch.setattr(cache._client, "get", boom)
+    assert cache.get("any:key") is None
