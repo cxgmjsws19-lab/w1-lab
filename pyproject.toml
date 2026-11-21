@@ -27,10 +27,11 @@ w1-lab = "w1_lab:main"
 requires = ["uv_build>=0.13.6,<0.14.0"]
 build-backend = "uv_build"
 
-# 国内直连 pypi.org 经常超时，走清华镜像
-[[tool.uv.index]]
-url = "https://pypi.tuna.tsinghua.edu.cn/simple"
-default = true
+# 国内直连 pypi.org 经常超时，镜像配置放在 uv 的【全局配置】里：
+#   Windows: %APPDATA%\uv\uv.toml
+#   Linux/macOS: ~/.config/uv/uv.toml
+# 不要写进这个文件——项目配置应当可移植，CI（GitHub Actions）在海外，
+# 走清华镜像反而慢。个人网络设置归全局，项目配置归项目。
 
 [dependency-groups]
 dev = [

@@ -18,10 +18,11 @@ htmlcov/
 
 # 运行时日志（样例数据 data/sample.log、data/bad.log 仍要提交）
 data/app.log*
-# ��ǩ֤�飺˽Կ�������ύ
+
+# 自签证书：私钥不能提交
 nginx/certs/*.key
 nginx/certs/*.crt
 
-# ��ʱ�ļ�
+# 临时文件
 *.bak
 /*.json
