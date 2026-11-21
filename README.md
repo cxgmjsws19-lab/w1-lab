@@ -97,6 +97,8 @@ tests/            30 个测试
 ## 已知限制
 
 - 自签证书只能本地用，浏览器会警告
-- `/debug/whoami` 路由仍存在于应用层（nginx 已屏蔽），生产应删除或加鉴权
+- `/debug/whoami` 默认**不注册**（需 `DEBUG=true` 才启用），nginx 也返回 404，双重屏蔽
 - 数据库密码是开发用的硬编码值，生产需改用 secret
+- **`config.py` / `decorators.py` / `reader.py` 是 W1 的练习产物，未接入主链路**
+  （各自文件头写明了定位与去留；其中 `retry` 和 `iter_lines` 会在项目 1 复用）
 - 分页、批量导入、日志格式自动识别都还没做

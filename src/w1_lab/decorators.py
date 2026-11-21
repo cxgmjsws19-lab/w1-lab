@@ -1,9 +1,25 @@
+"""W1 遗留：装饰器（当前未接入 HTTP 服务）。
+
+【三个装饰器各自的现状】
+
+- `timer` / `timer_async` —— **已被 uvicorn 的 access log 覆盖**。
+  uvicorn 每条请求都会打 `INFO: 172.18.0.5 - "GET /x HTTP/1.1" 200 OK`，
+  要耗时的话加 `--access-log` 参数或用 APM。这两个装饰器只用于练习。
+
+- `retry` —— **有真实价值，但位置不对**。
+  它现在捕获 `OSError`，适合网络抖动/连接失败的重试。当前服务没有接它，
+  原因是：请求级的写操作重试不安全（可能重复写入），
+  而读操作失败了应该让调用方看到错误，而不是偷偷重试。
+  **如果项目 1 要调外部 LLM API，这个装饰器可以直接复用**（那里重试是正确的）。
+
+【去留】保留。项目 1 会把 `retry` 真正用上。
+"""
+
 import functools
 import logging
 import time
-from collections.abc import Callable,Awaitable,Coroutine
-from typing import ParamSpec,TypeVar,Any
-from collections.abc import Awaitable
+from collections.abc import Awaitable, Callable, Coroutine
+from typing import Any, ParamSpec, TypeVar
 
 logger = logging.getLogger(__name__)
 
